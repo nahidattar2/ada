@@ -81,6 +81,16 @@ details.fold summary{cursor:pointer;padding:10px 14px;font-weight:700;display:fl
 .pv-demo{height:100%;display:grid;place-items:center;text-align:center;color:var(--mut);padding:20px}
 @media(max-width:860px){.card{width:calc((100% - 16px)/2)}.hero .deco{opacity:.22;width:75%}.hero .txt{max-width:100%}}
 @media(max-width:560px){.grid{gap:10px}.card{width:calc((100% - 10px)/2);padding:38px 8px 10px}.card h3{font-size:.92rem;min-height:4.3em}.card .btn{font-size:.85rem;padding:6px 4px;gap:4px}.card .btn svg{width:15px;height:15px}.ic{width:56px;height:48px}.ic svg{width:30px;height:30px}.card .no{right:8px;top:8px}.card .wt{left:8px;top:8px;font-size:.8rem}.hero{padding:20px}.hero h1{font-size:1.7rem}.hero .t2{font-size:1.1rem}.boxes,.about{grid-template-columns:1fr}.nav{justify-content:center}.nav .brand{border:0;padding:0;width:100%;text-align:center}.nav .tabs{flex:none}.nav .tabs a{padding:6px 12px}.shead h2{font-size:1.35rem}.shead h2:before,.shead h2:after{flex-basis:40px}}
+.bar{height:9px;background:#ece5f6;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#b48ae0,#4f1d84);border-radius:9px;transition:width .6s}
+.cbar{margin:14px 0 4px}.cb-top{display:flex;justify-content:space-between;font-weight:700;color:var(--p1);margin-bottom:5px;font-size:.95rem}
+.allbar{max-width:640px;margin:0 auto 16px;background:#fff;border:1.5px solid var(--bd);border-radius:16px;padding:4px 16px 12px}
+.mini{width:100%;display:flex;align-items:center;gap:8px}.mini .bar{flex:1;height:7px}.mini span{font-size:.8rem;font-weight:700;color:var(--p1);min-width:34px}
+.evs{display:flex;flex-direction:column;gap:7px}
+.evb{display:flex;align-items:center;gap:8px;width:100%;font:inherit;text-align:right;border-radius:12px;padding:8px 10px;cursor:pointer;border:1.5px solid var(--p3);background:#fff;color:var(--tx)}
+.evb.has:hover{background:var(--p4)}.evb.no{cursor:default;border-style:dashed;border-color:#d9cdea;background:#faf8fd;color:var(--mut)}
+.evi{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:700}.has .evi{background:#e4f5ea;color:var(--ok)}.no .evi{background:#fdf3e1}
+.evt{flex:1;font-weight:700}.evc{font-size:.8rem;font-weight:700;color:var(--p2);white-space:nowrap}.no .evc{color:var(--wait)}
+.evl{padding:4px 0 2px}
 </style>
 </head>
 <body>
@@ -228,16 +238,37 @@ function home(){
   h+='<label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input placeholder="ابحثي عن عنصر أو شاهد" oninput="search(this.value)"></label>';
   if(MODE==='demo')h+='<div class="banner">عرض تجريبي — تظهر الشواهد الحقيقية تلقائيًا بعد ربط مجلد الدرايف.</div>';
   if(ERR)h+=`<div class="banner">${esc(ERR)}</div>`;
-  h+='<div id="res"></div><div class="grid" id="grid">'+EL.map(e=>{const c=countFiles(findEl(e));
-    return`<div class="card" data-s="${esc(norm(e.t+' '+e.ex.join(' ')+' '+e.ev.join(' ')))}"><span class="no">${AR(e.n)}</span><span class="wt">${e.w}%</span><div class="ic">${ico(e.i)}</div><h3>${esc(e.t)}</h3><button class="btn" onclick="go('${e.k}')">${EXT} عرض الشواهد ${c?`<small>(${AR(c)})</small>`:''}</button></div>`}).join('')+'</div>';
+  const MS=EL.map(e=>evMap(e,findEl(e))),tot=MS.reduce((a,m)=>a+m.list.length,0),dn=MS.reduce((a,m)=>a+m.done,0);
+  h+=`<div class="allbar">${bar(Math.round(dn/tot*100),`اكتمال ملف الأداء الوظيفي: ${AR(dn)} من ${AR(tot)} شاهدًا`)}</div>`;
+  h+='<div id="res"></div><div class="grid" id="grid">'+EL.map((e,ix)=>{const c=countFiles(findEl(e)),mm=MS[ix];
+    return`<div class="card" data-s="${esc(norm(e.t+' '+e.ex.join(' ')+' '+e.ev.join(' ')))}"><span class="no">${AR(e.n)}</span><span class="wt">${e.w}%</span><div class="ic">${ico(e.i)}</div><h3>${esc(e.t)}</h3><div class="mini"><div class="bar"><i style="width:${mm.pct}%"></i></div><span>${AR(mm.pct)}٪</span></div><button class="btn" onclick="go('${e.k}')">${EXT} عرض الشواهد ${c?`<small>(${AR(c)})</small>`:''}</button></div>`}).join('')+'</div>';
   app.innerHTML=h}
 
+/* ---- ربط كل شاهد مقترح بمجلده أو بملفاته ---- */
+function evMap(e,node){
+  const used=new Set(),list=e.ev.map(t=>{const k=norm(t);let files=[],fold=null;
+    if(node){fold=node.folders.find(f=>norm(f.name)===k)||node.folders.find(f=>norm(f.name).includes(k)||k.includes(norm(f.name)));
+      if(fold){used.add(fold);files=allFiles(fold)}
+      node.files.forEach(f=>{if(norm(f.name).includes(k)){files.push({...f,path:[]});used.add(f)}})}
+    return{t,files,fold}});
+  const other=node?allFiles({files:node.files.filter(f=>!used.has(f)),folders:node.folders.filter(f=>!used.has(f))}):[];
+  const done=list.filter(x=>x.files.length).length;
+  return{list,other,done,pct:Math.round(done/list.length*100)}}
+const bar=(p,lbl)=>`<div class="cbar"><div class="cb-top"><span>${lbl||'اكتمال الشواهد'}</span><b>${AR(p)}٪</b></div><div class="bar"><i style="width:${p}%"></i></div></div>`;
+let EVS=[];
+function evOpen(i){const x=EVS[i];if(!x||!x.files.length)return;
+  if(x.files.length===1){const f=x.files[0];openFile(f.url,f.name,f.type);return}
+  const box=document.getElementById('evl'+i);box.style.display=box.style.display==='none'?'':'none'}
+function openFile(u,name,type){const a=document.createElement('a');a.href=u;a.dataset.name=name;a.innerHTML=chip(type,name);pv({preventDefault(){}},a)}
+
 function elView(e){
-  const node=findEl(e);
+  const node=findEl(e),m=evMap(e,node);EVS=m.list;
   let h=`<div class="panel"><div class="ptop"><button class="back" onclick="go('')">→ الرئيسية</button>${node&&node.url&&node.url!=='#'?`<a class="drive" href="${esc(node.url)}" target="_blank" rel="noopener">فتح المجلد في Drive ↗</a>`:''}</div>
    <div class="eh"><div class="ic">${ico(e.i)}</div><div><h2>${AR(e.n)}. ${esc(e.t)}</h2><span class="wt">الوزن النسبي ${e.w}%</span></div></div>
-   <div class="boxes"><div class="box"><h4>أمثلة على تحقق العنصر</h4><ul>${e.ex.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="box"><h4>الشواهد المقترحة</h4><ul>${e.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
-   <h3 class="stitle">الشواهد المرفوعة ${node?`(${AR(countFiles(node))})`:''}</h3>${node?renderBody(node,0):'<div class="wait-txt">⏳ قيد الاستكمال</div>'}`;
+   ${bar(m.pct,`اكتمال شواهد العنصر: ${AR(m.done)} من ${AR(m.list.length)}`)}
+   <div class="boxes"><div class="box"><h4>أمثلة على تحقق العنصر</h4><ul>${e.ex.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+   <div class="box"><h4>الشواهد</h4><div class="evs">${m.list.map((x,i)=>`<button class="evb ${x.files.length?'has':'no'}" onclick="evOpen(${i})" ${x.files.length?'':'disabled'}><span class="evi">${x.files.length?'✓':'⏳'}</span><span class="evt">${esc(x.t)}</span><span class="evc">${x.files.length?(x.files.length>1?AR(x.files.length)+' ملفات':'فتح الشاهد ↗'):'لم يُرفع بعد'}</span></button>${x.files.length>1?`<div class="evl" id="evl${i}" style="display:none">${x.files.map(f=>fileRow(f)).join('')}</div>`:''}`).join('')}</div></div></div>`;
+  if(m.other.length)h+=`<h3 class="stitle">شواهد أخرى (${AR(m.other.length)})</h3>${m.other.map(f=>fileRow(f,true)).join('')}`;
   if(e.links)h+='<div class="links">'+e.links.map(l=>`<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.t)} ↗</a>`).join('')+'</div>';
   app.innerHTML=h+'</div>'}
 
